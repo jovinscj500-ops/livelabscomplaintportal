@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LIVE LABS | CAPA Analytics</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* --- GLOBAL STYLES --- */
+        :root { --primary: #1a2a6c; --secondary: #b21f1f; --accent: #fdbb2d; --dark: #0f172a; --light: #f1f5f9; --border: #cbd5e1; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Montserrat', sans-serif; }
+        body { background-color: var(--light); height: 100vh; display: flex; flex-direction: column; }
+
+        /* --- LOGIN ANIMATION --- */
+        #loginWrapper { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #f0f2f5; z-index: 9999; display: flex; justify-content: center; align-items: center; }
+        .login-card-animated { display: flex; width: 900px; height: 550px; background: #fff; border-radius: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.1); overflow: hidden; }
+        .visual-side { flex: 1; background: linear-gradient(135deg, var(--primary), var(--secondary), var(--accent)); background-size: 400% 400%; animation: gradientBG 15s ease infinite; position: relative; display: flex; flex-direction: column; justify-content: center; padding: 40px; color: white; overflow: hidden; }
+        @keyframes gradientBG { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+        .node { position: absolute; background: rgba(255,255,255,0.8); border-radius: 50%; box-shadow: 0 0 15px rgba(255,255,255,0.5); animation: pulseAndMove 8s infinite alternate ease-in-out; }
+        .node:nth-child(1) { width: 60px; height: 60px; top: 20%; left: 20%; } .node:nth-child(2) { width: 40px; height: 40px; top: 60%; left: 70%; animation-delay: 2s; }
+        @keyframes pulseAndMove { 0% { transform: scale(1) translate(0,0); } 100% { transform: scale(1.1) translate(20px,-20px); } }
+        .stream { position: absolute; bottom: -100px; width: 2px; background: linear-gradient(to top, transparent, #fff, transparent); animation: riseUp 4s infinite linear; opacity: 0; }
+        .stream:nth-child(3) { left: 15%; height: 300px; animation-delay: 0.5s; } .stream:nth-child(4) { left: 85%; height: 400px; animation-delay: 1s; }
+        @keyframes riseUp { 0% { transform: translateY(0); opacity: 0; } 50% { opacity: 0.7; } 100% { transform: translateY(-700px); opacity: 0; } }
+        .form-side { flex: 1; display: flex; justify-content: center; align-items: center; padding: 40px; background-color: white; }
+        .form-container { width: 100%; max-width: 350px; animation: fadeIn 1.5s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .input-group { position: relative; margin-bottom: 25px; }
+        .input-group input { width: 100%; padding: 10px 0; font-size: 16px; color: #333; border: none; border-bottom: 2px solid #ddd; outline: none; background: transparent; }
+        .input-group label { position: absolute; top: 10px; left: 0; font-size: 16px; color: #999; pointer-events: none; transition: 0.3s ease all; }
+        .input-group input:focus ~ label, .input-group input:valid ~ label { top: -20px; font-size: 12px; color: var(--primary); font-weight: 600; }
+        .bar { position: relative; display: block; width: 100%; }
+        .bar:before, .bar:after { content: ''; height: 2px; width: 0; bottom: 0; position: absolute; background: var(--primary); transition: 0.3s ease all; }
+        .bar:before { left: 50%; } .bar:after { right: 50%; }
+        .input-group input:focus ~ .bar:before, .input-group input:focus ~ .bar:after { width: 50%; }
+        .btn-login { width: 100%; padding: 15px; background: linear-gradient(to right, var(--primary), var(--secondary)); color: white; border: none; border-radius: 30px; font-size: 18px; font-weight: 600; cursor: pointer; box-shadow: 0 10px 20px rgba(0,0,0,0.15); transition: transform 0.3s; }
+        .btn-login:hover { transform: translateY(-3px); }
+
+        /* --- DASHBOARD LAYOUT --- */
+        .navbar { background: var(--primary); color: white; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
+        .brand { font-size: 1.5rem; font-weight: bold; }
+        .btn-logout { background: var(--secondary); color: white; border: none; padding: 5px 15px; border-radius: 4px; cursor: pointer; }
+        .container { flex: 1; padding: 30px; overflow-y: auto; max-width: 1400px; margin: 0 auto; width: 100%; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .hidden { display: none !important; }
+        
+        /* UI Elements */
+        .form-group { margin-bottom: 15px; } .form-group label { display: block; margin-bottom: 5px; font-weight: 600; }
+        input, select, textarea { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 4px; }
+        .btn { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; color: white; font-weight: bold; } .btn-primary { background: var(--primary); }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
+        th, td { text-align: left; padding: 10px; border-bottom: 1px solid var(--border); } th { background: #e2e8f0; }
+        .badge { padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; }
+        .st-Open { background: #fee2e2; color: #991b1b; } .st-Process { background: #fef3c7; color: #92400e; } .st-Closed { background: #dcfce7; color: #166534; }
+        .stat-card h2 { margin: 0; font-size: 2.5rem; }
+
+        /* Filter Bar */
+        .filter-bar { background: #f8fafc; padding: 15px; border: 1px solid var(--border); border-radius: 6px; display: flex; gap: 15px; align-items: center; flex-wrap: wrap; margin-bottom: 15px; }
+        .filter-group { display: flex; align-items: center; gap: 10px; }
+        
+        /* Chart Controls */
+        .chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .chart-container { position: relative; height: 300px; width: 100%; display:flex; justify-content:center; }
+
+        /* Modal */
+        .modal-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); display:flex; justify-content:center; align-items:center; z-index:1000; }
+        .modal-box { background:white; padding:25px; border-radius:8px; width:500px; max-width:90%; }
+    </style>
+</head>
+<body>
+
+    <div id="loginWrapper">
+        <div class="login-card-animated">
+            <div class="visual-side">
+                <div class="node"></div><div class="node"></div><div class="stream"></div><div class="stream"></div>
+                <div style="position:relative; z-index:2;"><h1>Minimize Noise.<br>Maximize Flow.</h1><p>Intelligent CAPA management for LIVE LABS.</p></div>
+            </div>
+            <div class="form-side">
+                <div class="form-container">
+                    <h2 style="margin-bottom:30px; color:#333;">Access Portal</h2>
+                    <form onsubmit="handleLogin(event)">
+                        <div class="input-group"><input type="text" id="uName" required><label>Username</label><span class="bar"></span></div>
+                        <div class="input-group"><input type="password" id="uPass" required><label>Password</label><span class="bar"></span></div>
+                        <p id="loginError" class="hidden" style="color:red; font-size:0.8rem; margin-bottom:10px;">Invalid Credentials</p>
+                        <button class="btn-login">Login to Workflow</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <nav class="navbar hidden" id="navBar">
+        <div class="brand">LIVE LABS | CAPA System</div>
+        <div><span id="welcomeMsg" style="margin-right:15px;"></span><button class="btn-logout" onclick="logout()">Logout</button></div>
+    </nav>
+
+    <div class="container hidden" id="mainDashboard">
+        
+        <div id="userView" class="hidden">
+            <div class="card">
+                <h3>Raise Complaint <i class="fas fa-flag"></i></h3>
+                <form onsubmit="submitTicket(event)">
+                    <div class="form-group"><label>Description</label><textarea id="tDesc" rows="3" required></textarea></div>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+                        <div class="form-group"><label>Priority</label><select id="tPrio"><option>Low</option><option>Medium</option><option>High</option></select></div>
+                        <div class="form-group"><label>Attachment</label><input type="file" id="tFile" accept="image/*, application/pdf"></div>
+                    </div>
+                    <button class="btn btn-primary">Submit Complaint</button>
+                </form>
+            </div>
+            <div class="card">
+                <h3>My Tickets</h3>
+                <table id="userTable"><thead><tr><th>ID</th><th>Date</th><th>Time</th><th>Issue</th><th>Status</th><th>Resolution</th></tr></thead><tbody></tbody></table>
+            </div>
+        </div>
+
+        <div id="adminView" class="hidden">
+            <div class="stats-container" style="display:flex; gap:20px; margin-bottom:20px;">
+                <div class="card stat-card" style="flex:1; background:#3b82f6; color:white; text-align:center;"><h2 id="statTotal">0</h2><small>Total</small></div>
+                <div class="card stat-card" style="flex:1; background:#ef4444; color:white; text-align:center;"><h2 id="statOpen">0</h2><small>Pending</small></div>
+                <div class="card stat-card" style="flex:1; background:#10b981; color:white; text-align:center;"><h2 id="statClosed">0</h2><small>Closed</small></div>
+            </div>
+
+            <div class="card">
+                <div class="chart-header">
+                    <h3>Priority Distribution <i class="fas fa-chart-pie"></i></h3>
+                </div>
+                <div class="chart-container">
+                    <canvas id="trendChart"></canvas>
+                </div>
+            </div>
+
+            <div class="card">
+                <div style="display:flex; justify-content:space-between; margin-bottom:20px;">
+                    <h3>Complaint Management</h3>
+                    <div><button class="btn" style="background:#ef4444" onclick="exportPDF()">PDF</button> <button class="btn" style="background:#10b981" onclick="exportExcel()">Excel</button></div>
+                </div>
+                
+                <div class="filter-bar">
+                    <div class="filter-group">
+                        <label><i class="fas fa-filter"></i> Filter Mode:</label>
+                        <select id="filterMode" class="filter-input" onchange="toggleFilters()">
+                            <option value="all">Show All</option><option value="date">Date</option><option value="month">Month</option><option value="year">Year</option>
+                        </select>
+                    </div>
+                    <div id="filterDate" class="filter-group hidden"><span>From:</span> <input type="date" id="dStart" class="filter-input"> <span>To:</span> <input type="date" id="dEnd" class="filter-input"></div>
+                    <div id="filterMonth" class="filter-group hidden"><span>From:</span> <input type="month" id="mStart" class="filter-input"> <span>To:</span> <input type="month" id="mEnd" class="filter-input"></div>
+                    <div id="filterYear" class="filter-group hidden"><span>From:</span> <input type="number" id="yStart" placeholder="2024" class="filter-input" style="width:80px"> <span>To:</span> <input type="number" id="yEnd" placeholder="2030" class="filter-input" style="width:80px"></div>
+                    <button class="btn" style="background:#64748b; padding: 8px 15px;" onclick="renderAdminTable()">Apply</button>
+                </div>
+
+                <table id="adminTable"><thead><tr><th>ID</th><th>Date</th><th>Time</th><th>User</th><th>Issue</th><th>Attach</th><th>Prio</th><th>CAPA</th><th>Closed By</th><th>Status</th></tr></thead><tbody></tbody></table>
+            </div>
+            
+            <div class="card" id="createUserPanel">
+                <h3>Add User</h3>
+                <form onsubmit="createUser(event)" style="display:flex; gap:10px; align-items:flex-end;">
+                    <div style="flex:1"><label>User</label><input id="newU" required></div><div style="flex:1"><label>Pass</label><input id="newP" required></div><div style="flex:1"><label>Role</label><select id="newR"><option>User</option><option>Sub-Admin</option></select></div><button class="btn btn-primary">Add</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="capaModal" class="modal-overlay hidden">
+        <div class="modal-box">
+            <h3>Close Ticket</h3>
+            <div class="form-group"><label>Corrective Action</label><textarea id="capaCorrective" rows="3"></textarea></div>
+            <div class="form-group"><label>Preventive Action</label><textarea id="capaPreventive" rows="3"></textarea></div>
+            <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+                <button class="btn" style="background:#94a3b8" onclick="closeModal('capaModal')">Cancel</button><button class="btn btn-primary" onclick="saveResolution()">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="fileModal" class="modal-overlay hidden">
+        <div class="modal-box" style="width:800px;"><h3>Attachment</h3><div id="fileContent" style="margin:20px 0;"></div><button class="btn btn-primary" onclick="closeModal('fileModal')">Close</button></div>
+    </div>
+
+    <script>
+        // --- INIT ---
+        const DB_USERS = 'll_users_v8'; const DB_TICKETS = 'll_tickets_v8';
+        let currentUser = null; let pendingTicketIndex = null; let myChart = null;
+
+        if(!localStorage.getItem(DB_USERS)) localStorage.setItem(DB_USERS, JSON.stringify([{u:'Jovins', p:'Jov12', r:'Admin'}]));
+        if(!localStorage.getItem(DB_TICKETS)) localStorage.setItem(DB_TICKETS, JSON.stringify([]));
+
+        // --- AUTH ---
+        function handleLogin(e) {
+            e.preventDefault();
+            const u = document.getElementById('uName').value; const p = document.getElementById('uPass').value;
+            const users = JSON.parse(localStorage.getItem(DB_USERS));
+            const found = users.find(x => x.u === u && x.p === p);
+            if(found) {
+                currentUser = found;
+                document.getElementById('loginWrapper').classList.add('hidden');
+                document.getElementById('mainDashboard').classList.remove('hidden');
+                document.getElementById('navBar').classList.remove('hidden');
+                document.getElementById('welcomeMsg').innerText = `Hello, ${found.u}`;
+                renderDashboard();
+            } else { document.getElementById('loginError').classList.remove('hidden'); }
+        }
+        function logout() { location.reload(); }
+
+        function renderDashboard() {
+            if(currentUser.r === 'User') {
+                document.getElementById('userView').classList.remove('hidden'); document.getElementById('adminView').classList.add('hidden'); renderUserTable();
+            } else {
+                document.getElementById('adminView').classList.remove('hidden'); document.getElementById('userView').classList.add('hidden');
+                renderAdminTable(); renderChart();
+                if(currentUser.r !== 'Admin') document.getElementById('createUserPanel').classList.add('hidden');
+            }
+        }
+
+        // --- CHART JS LOGIC (MODIFIED FOR PIE CHART) ---
+        function renderChart() {
+            const db = JSON.parse(localStorage.getItem(DB_TICKETS));
+            
+            // Count Priorities
+            const prioCounts = { High: 0, Medium: 0, Low: 0 };
+            db.forEach(t => {
+                if(prioCounts[t.prio] !== undefined) prioCounts[t.prio]++;
+            });
+
+            // Destroy Old Chart
+            if(myChart) myChart.destroy();
+
+            // Render New Pie Chart
+            const ctx = document.getElementById('trendChart').getContext('2d');
+            myChart = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: ['High', 'Medium', 'Low'],
+                    datasets: [{
+                        data: [prioCounts.High, prioCounts.Medium, prioCounts.Low],
+                        backgroundColor: ['#ef4444', '#f59e0b', '#3b82f6'], // Red, Orange, Blue
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { 
+                        legend: { position: 'bottom' },
+                        title: { display: true, text: 'Total Complaints by Priority' }
+                    }
+                }
+            });
+        }
+
+        // --- LOGIC ---
+        function submitTicket(e) {
+            e.preventDefault();
+            const fileIn = document.getElementById('tFile'); const file = fileIn.files[0]; const now = new Date();
+            const newTicket = {
+                id: Date.now().toString().slice(-4), date: now.toLocaleDateString(), time: now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}),
+                isoDate: now.toISOString().split('T')[0], user: currentUser.u, desc: document.getElementById('tDesc').value, prio: document.getElementById('tPrio').value,
+                fileData: '', fileType: file ? file.type : '', status: 'Open', ca: '', pa: '', closedBy: ''
+            };
+            const save = (t) => {
+                const db = JSON.parse(localStorage.getItem(DB_TICKETS)); db.push(t); localStorage.setItem(DB_TICKETS, JSON.stringify(db));
+                alert('Submitted!'); e.target.reset(); renderUserTable();
+            };
+            if(file) { const r = new FileReader(); r.onload = (evt) => { newTicket.fileData = evt.target.result; save(newTicket); }; r.readAsDataURL(file); } 
+            else { save(newTicket); }
+        }
+
+        function renderUserTable() {
+            const db = JSON.parse(localStorage.getItem(DB_TICKETS)).filter(t => t.user === currentUser.u);
+            document.querySelector('#userTable tbody').innerHTML = db.map(t => `<tr><td>#${t.id}</td><td>${t.date}</td><td>${t.time||'-'}</td><td>${t.desc}</td><td><span class="badge st-${t.status==='Under Process'?'Process':t.status}">${t.status}</span></td><td>${t.ca||'-'}</td></tr>`).join('');
+        }
+
+        function renderAdminTable() {
+            let db = JSON.parse(localStorage.getItem(DB_TICKETS));
+            // Update Stats
+            document.getElementById('statTotal').innerText = db.length;
+            document.getElementById('statOpen').innerText = db.filter(t => t.status !== 'Closed').length;
+            document.getElementById('statClosed').innerText = db.filter(t => t.status === 'Closed').length;
+            
+            // Filters
+            const mode = document.getElementById('filterMode').value;
+            if (mode === 'date') { const s = document.getElementById('dStart').value; const e = document.getElementById('dEnd').value; if(s&&e) db=db.filter(t=>t.isoDate>=s && t.isoDate<=e); }
+            else if (mode === 'month') { const s = document.getElementById('mStart').value; const e = document.getElementById('mEnd').value; if(s&&e) db=db.filter(t=>t.isoDate.slice(0,7)>=s && t.isoDate.slice(0,7)<=e); }
+            else if (mode === 'year') { const s = document.getElementById('yStart').value; const e = document.getElementById('yEnd').value; if(s&&e) db=db.filter(t=>t.isoDate.slice(0,4)>=s && t.isoDate.slice(0,4)<=e); }
+
+            document.querySelector('#adminTable tbody').innerHTML = db.map(t => {
+                const isClosed = t.status === 'Closed';
+                const statusCtrl = isClosed ? `<span class="badge st-Closed">Closed</span>` : `<select onchange="checkStatus(this, '${t.id}')"><option ${t.status==='Open'?'selected':''}>Open</option><option ${t.status==='Under Process'?'selected':''}>Under Process</option><option value="Closed">Closed</option></select>`;
+                return `<tr><td>#${t.id}</td><td>${t.date}</td><td>${t.time||'-'}</td><td>${t.user}</td><td>${t.desc}</td><td>${t.fileData?`<button class="btn" style="padding:2px 5px; background:#64748b" onclick="viewFile('${t.id}')">View</button>`:'-'}</td><td style="color:${t.prio==='High'?'red':'inherit'}">${t.prio}</td><td>${t.ca?'View':'-'}</td><td>${t.closedBy||'-'}</td><td>${statusCtrl}</td></tr>`;
+            }).join('');
+        }
+
+        function checkStatus(sel, id) {
+            if(sel.value === 'Closed') { pendingTicketIndex = id; document.getElementById('capaModal').classList.remove('hidden'); }
+            else { updateStatus(id, sel.value, '', ''); }
+        }
+        function updateStatus(id, st, ca, pa) {
+            const db = JSON.parse(localStorage.getItem(DB_TICKETS)); const idx = db.findIndex(t => t.id === id);
+            if(idx > -1) { 
+                db[idx].status = st; 
+                if(ca) { db[idx].ca = ca; db[idx].pa = pa; db[idx].closedBy = currentUser.u; } 
+                localStorage.setItem(DB_TICKETS, JSON.stringify(db)); 
+                renderAdminTable(); 
+                renderChart(); // Refresh chart
+            }
+        }
+        function saveResolution() {
+            const ca = document.getElementById('capaCorrective').value; const pa = document.getElementById('capaPreventive').value;
+            if(!ca || !pa) return alert('Enter details'); updateStatus(pendingTicketIndex, 'Closed', ca, pa); closeModal('capaModal');
+        }
+
+        function toggleFilters() {
+            const mode = document.getElementById('filterMode').value;
+            document.querySelectorAll('.filter-group.hidden').forEach(el => el.classList.add('hidden'));
+            document.getElementById('filterDate').classList.add('hidden'); document.getElementById('filterMonth').classList.add('hidden'); document.getElementById('filterYear').classList.add('hidden');
+            if(mode === 'date') document.getElementById('filterDate').classList.remove('hidden');
+            if(mode === 'month') document.getElementById('filterMonth').classList.remove('hidden');
+            if(mode === 'year') document.getElementById('filterYear').classList.remove('hidden');
+            if(mode === 'all') renderAdminTable();
+        }
+
+        function viewFile(id) {
+            const t = JSON.parse(localStorage.getItem(DB_TICKETS)).find(x => x.id === id); const div = document.getElementById('fileContent');
+            div.innerHTML = t.fileType.startsWith('image') ? `<img src="${t.fileData}" style="max-width:100%">` : `<embed src="${t.fileData}" type="application/pdf" width="100%" height="400px">`;
+            document.getElementById('fileModal').classList.remove('hidden');
+        }
+        function createUser(e) {
+            e.preventDefault(); const u = document.getElementById('newU').value; const p = document.getElementById('newP').value; const r = document.getElementById('newR').value;
+            const db = JSON.parse(localStorage.getItem(DB_USERS)); if(db.some(x => x.u === u)) return alert('Exists');
+            db.push({u,p,r}); localStorage.setItem(DB_USERS, JSON.stringify(db)); alert('User Added'); e.target.reset();
+        }
+        function closeModal(id) { document.getElementById(id).classList.add('hidden'); renderAdminTable(); }
+
+        // --- EXPORT ---
+        function exportExcel() {
+            const db = JSON.parse(localStorage.getItem(DB_TICKETS));
+            let csv = "ID,Date,Time,User,Desc,Prio,Closed By,Corrective,Preventive,Status\n";
+            csv += db.map(t => `${t.id},${t.date},${t.time||'-'},${t.user},"${(t.desc||'').replace(/"/g,'""')}",${t.prio},${t.closedBy||'-'},"${(t.ca||'').replace(/"/g,'""')}","${(t.pa||'').replace(/"/g,'""')}",${t.status}`).join("\n");
+            const link = document.createElement("a"); link.href = "data:text/csv;charset=utf-8," + encodeURIComponent(csv); link.download = "LiveLabs_Report.csv"; link.click();
+        }
+        function exportPDF() {
+            const { jsPDF } = window.jspdf; const doc = new jsPDF('l', 'mm', 'a4');
+            doc.text("LIVE LABS | CAPA Report", 14, 15);
+            const data = JSON.parse(localStorage.getItem(DB_TICKETS)).map(t => [t.id, t.date, t.time||'-', t.user, t.prio, t.desc, t.closedBy||'-', t.ca, t.pa, t.status]);
+            doc.autoTable({ head: [['ID','Date','Time','User','Prio','Desc','Clsd By','Corrective','Preventive','Status']], body: data, startY: 25, styles: { fontSize: 8, overflow: 'linebreak' }, columnStyles: { 5: {cellWidth:35}, 7: {cellWidth:35}, 8: {cellWidth:35} } });
+            doc.save("LiveLabs_Report.pdf");
+        }
+    </script>
+</body>
+</html>
